@@ -21,7 +21,8 @@ export default (isScrollAtTop: boolean, isScrollAtBottom: boolean) => {
   });
   scrollPingRef.current.top = isScrollAtTop;
   scrollPingRef.current.bottom = isScrollAtBottom;
-
+  
+  // smoothOffset 可能是惯性移动？一般用于移动端
   return (deltaY: number, smoothOffset = false) => {
     const originScroll =
       // Pass origin wheel when on the top

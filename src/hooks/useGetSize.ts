@@ -3,7 +3,7 @@ import type { GetKey, GetSize } from '../interface';
 import * as React from 'react';
 
 /**
- * Size info need loop query for the `heights` which will has the perf issue.
+ * Size info need loop query for the `heights` which will has the perf issue. perf == performance 性能
  * Let cache result for each render phase.
  */
 export function useGetSize<T>(

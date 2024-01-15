@@ -24,6 +24,7 @@ export default function useHeights<T>(
     raf.cancel(collectRafRef.current);
   }
 
+  // 缓存 item offsetHeight 信息，并触发 rerender
   function collectHeight(sync = false) {
     cancelRaf();
 
@@ -31,6 +32,7 @@ export default function useHeights<T>(
       instanceRef.current.forEach((element, key) => {
         if (element && element.offsetParent) {
           const htmlElement = findDOMNode<HTMLElement>(element);
+          // offsetHeight = content + padding + border + scrollbar 
           const { offsetHeight } = htmlElement;
           if (heightsRef.current.get(key) !== offsetHeight) {
             heightsRef.current.set(key, htmlElement.offsetHeight);
@@ -39,16 +41,19 @@ export default function useHeights<T>(
       });
 
       // Always trigger update mark to tell parent that should re-calculate heights when resized
-      setUpdatedMark((c) => c + 1);
+      setUpdatedMark((c) => c + 1); // rerender
     };
 
     if (sync) {
       doCollect();
     } else {
+      // 很多喜欢在下一帧做，应该是避免出现性能问题
       collectRafRef.current = raf(doCollect);
     }
   }
 
+  // item 是 data 数据内的 item
+  // rerender 时候会重新执行 ref 函数
   function setInstanceRef(item: T, instance: HTMLElement) {
     const key = getKey(item);
     const origin = instanceRef.current.get(key);

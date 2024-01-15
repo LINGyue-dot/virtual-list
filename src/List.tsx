@@ -89,6 +89,8 @@ export interface ListProps<T> extends Omit<React.HTMLAttributes<any>, 'children'
   extraRender?: (info: ExtraRenderInfo) => React.ReactNode;
 }
 
+// 1. basic
+// 2. dynamic height
 export function RawList<T>(props: ListProps<T>, ref: React.Ref<ListRef>) {
   const {
     prefixCls = 'rc-virtual-list',
@@ -102,7 +104,7 @@ export function RawList<T>(props: ListProps<T>, ref: React.Ref<ListRef>) {
     itemKey,
     virtual,
     direction,
-    scrollWidth,
+    scrollWidth, // 有 horizon 的虚拟滚动吗？
     component: Component = 'div',
     onScroll,
     onVirtualScroll,
@@ -114,7 +116,7 @@ export function RawList<T>(props: ListProps<T>, ref: React.Ref<ListRef>) {
   } = props;
 
   // ================================= MISC =================================
-  const useVirtual = !!(virtual !== false && height && itemHeight);
+  const useVirtual = !!(virtual !== false && height && itemHeight); // -》 tree 的 height 如何传进来？
   const inVirtual = useVirtual && data && (itemHeight * data.length > height || !!scrollWidth);
   const isRTL = direction === 'rtl';
 
@@ -163,7 +165,9 @@ export function RawList<T>(props: ListProps<T>, ref: React.Ref<ListRef>) {
 
       const alignedTop = keepInRange(value);
 
+      // 会自动触发容器滚动
       componentRef.current.scrollTop = alignedTop;
+      console.log('srollTop 触发')
       return alignedTop;
     });
   }
@@ -184,12 +188,7 @@ export function RawList<T>(props: ListProps<T>, ref: React.Ref<ListRef>) {
   );
 
   // ========================== Visible Calculation =========================
-  const {
-    scrollHeight,
-    start,
-    end,
-    offset: fillerOffset,
-  } = React.useMemo(() => {
+  const { scrollHeight, start, end, offset: fillerOffset } = React.useMemo(() => {
     if (!useVirtual) {
       return {
         scrollHeight: undefined,
@@ -215,6 +214,7 @@ export function RawList<T>(props: ListProps<T>, ref: React.Ref<ListRef>) {
     let endIndex: number;
 
     const dataLen = mergedData.length;
+    // 这里好像还可以优化成二分？可能不太行...
     for (let i = 0; i < dataLen; i += 1) {
       const item = mergedData[i];
       const key = getKey(item);
@@ -251,10 +251,10 @@ export function RawList<T>(props: ListProps<T>, ref: React.Ref<ListRef>) {
     endIndex = Math.min(endIndex + 1, mergedData.length - 1);
 
     return {
-      scrollHeight: itemTop,
-      start: startIndex,
-      end: endIndex,
-      offset: startOffset,
+      scrollHeight: itemTop, // 总高度
+      start: startIndex, // 0
+      end: endIndex, // 1
+      offset: startOffset, // 20
     };
   }, [inVirtual, useVirtual, offsetTop, mergedData, heightUpdatedMark, height]);
 
@@ -272,17 +272,18 @@ export function RawList<T>(props: ListProps<T>, ref: React.Ref<ListRef>) {
   };
 
   // Hack on scrollbar to enable flash call
+  // 拦截 scrollbar 来避免白屏
   const verticalScrollBarRef = useRef<ScrollBarRef>();
   const horizontalScrollBarRef = useRef<ScrollBarRef>();
 
-  const horizontalScrollBarSpinSize = React.useMemo(
-    () => getSpinSize(size.width, scrollWidth),
-    [size.width, scrollWidth],
-  );
-  const verticalScrollBarSpinSize = React.useMemo(
-    () => getSpinSize(size.height, scrollHeight),
-    [size.height, scrollHeight],
-  );
+  const horizontalScrollBarSpinSize = React.useMemo(() => getSpinSize(size.width, scrollWidth), [
+    size.width,
+    scrollWidth,
+  ]);
+  const verticalScrollBarSpinSize = React.useMemo(() => getSpinSize(size.height, scrollHeight), [
+    size.height,
+    scrollHeight,
+  ]);
 
   // =============================== In Range ===============================
   const maxScrollHeight = scrollHeight - height;
@@ -361,6 +362,7 @@ export function RawList<T>(props: ListProps<T>, ref: React.Ref<ListRef>) {
     return tmpOffsetLeft;
   };
 
+  // 最后是修改了 componentRef.current.scrollTop 变为 + deltaY 的 scrollTop
   const onWheelDelta: Parameters<typeof useFrameWheel>[4] = useEvent((offsetXY, fromHorizontal) => {
     if (fromHorizontal) {
       // Horizontal scroll no need sync virtual position
@@ -383,11 +385,12 @@ export function RawList<T>(props: ListProps<T>, ref: React.Ref<ListRef>) {
   });
 
   // Since this added in global,should use ref to keep update
+  // 滚动调用 onWheelDelta
   const [onRawWheel, onFireFoxScroll] = useFrameWheel(
-    useVirtual,
-    isScrollAtTop,
-    isScrollAtBottom,
-    !!scrollWidth,
+    useVirtual, // true
+    isScrollAtTop, //
+    isScrollAtBottom, //
+    !!scrollWidth, // false
     onWheelDelta,
   );
 
@@ -411,6 +414,7 @@ export function RawList<T>(props: ListProps<T>, ref: React.Ref<ListRef>) {
 
     const componentEle = componentRef.current;
     componentEle.addEventListener('wheel', onRawWheel);
+    // DOMMouseScroll 看起来是个兼容 ie11 的写法？
     componentEle.addEventListener('DOMMouseScroll', onFireFoxScroll as any);
     componentEle.addEventListener('MozMousePixelScroll', onMozMousePixelScroll);
 

@@ -11,6 +11,7 @@ export default function useChildren<T>(
   renderFunc: RenderFunc<T>,
   { getKey }: SharedConfig<T>,
 ) {
+  console.log(' startIndex 计算完成', startIndex);
   return list.slice(startIndex, endIndex + 1).map((item, index) => {
     const eleIndex = startIndex + index;
     const node = renderFunc(item, eleIndex, {
